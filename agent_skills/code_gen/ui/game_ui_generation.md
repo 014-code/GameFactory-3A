@@ -4,6 +4,10 @@ Generate one task's engine-native UI, then its Browser Play delivery, inside the
 prepared workspace. UI owns presentation and public Mechanic binding; it does
 not own gameplay rules, Browser backends, execution, or evaluation.
 
+For game-feel or camera requests, read `agent_skills/game-feel/SKILL.md`.
+Consume published events for feedback and own settings, cleanup and camera
+presentation; do not infer hits from button presses or implement damage rules.
+
 ## Authority And Inputs
 
 Read before editing:

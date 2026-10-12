@@ -152,7 +152,7 @@ export class FollowCamera {
 
     // Positional lag only. An exponential ease is frame-rate independent
     // enough for a camera and needs no velocity state.
-    const chase = Math.min(1, delta * this.lag);
+    const chase = 1 - Math.exp(-Math.max(0, delta) * this.lag);
     this.focus.lerp(
       this.#scratch
         .copy(this.target.object.position)

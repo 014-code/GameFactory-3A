@@ -1,0 +1,76 @@
+---
+name: game-feel
+description: Design and implement gameplay feedback and playable camera framing, using confirmed Mechanic events and the selected engine runtime.
+---
+
+# Game Feel and Playable Cameras
+
+Read for impact/action feedback, device vibration, screen dynamics, camera follow,
+composition or transitions. For generated CG clips use the CG director instead.
+Paths below are repository-root-relative.
+
+## Ownership and handoff
+
+Keep `UI -> Mechanic -> runtime framework`. Mechanic owns confirmed events and
+state; presentation consumes them. A swing/fire event is not a confirmed impact.
+Publish the necessary events in `mechanic_contract.json` before UI binds them.
+Do not introduce camera shake, HUD, vibration or global time scaling into rules.
+
+For each player action record in the game's workspace:
+
+| Field | Required decision |
+|---|---|
+| Trigger | Exact published event, actor/recipient scope, confirmed outcome |
+| Cue | Animation/audio/VFX/UI cues and asset IDs; meaningful cue without motion/haptics |
+| Motion | Translation in engine world units, FOV degrees, duration seconds, upper bound |
+| Haptics | Opt-in setting, capability detection, duration with units, unsupported fallback |
+| Repetition | Event identity/edge trigger, replace/coalesce policy, rate limit |
+| Camera | Focus targets, offset, FOV/frustum, follow response, switch/cut policy, owner |
+| Cleanup | Pause, focus loss, device loss, respawn/scene exit and disposal |
+| Evidence | Native tests and observed play/recording; device test separately |
+
+Use subtle motion defaults and independent feedback, intensity, haptics and
+reduced-motion controls. Honor the platform's motion preference until the player
+overrides it. Zero optional motion removes shake/bob/roll/FOV pulses while keeping
+health, direction and action outcomes readable through static cues. Avoid flashes.
+
+## Camera implementation
+
+One final camera writer owns base pose plus transient offsets. Never integrate
+last frame's shake back into the base pose. Use seconds and `1-exp(-response*dt)`
+for follow damping, with explicit cuts for spawn/teleport. Keep player input and
+physics independent of presentation; aiming/picking must use the intended base
+aim, not a vibrating display pose. Frame the player and relevant action without
+revealing hidden targets. Disable competing Orbit/PointerLock/cinematic writers.
+
+Choose chase, fixed arena, over-shoulder, first-person or authored shots from the
+activity. Define target weights/look-ahead, distance/FOV bounds and switch priority
+before tuning. Resolve wall/ceiling/terrain obstruction with the selected engine's
+collision query; test corners and near-plane clipping. A center ray alone cannot
+prove clearance for the camera volume. Do not add an unrelated engine dependency.
+
+## Existing Three.js implementation
+
+Public exports: `A3GameFeedback` and `A3GameCameraRig` from `@a3game/playable`.
+Read `engine_adapters/three_js/plugin/A3GamePlayable/src/engine/game-feel.js` and
+its README contract before using them. The arena fighter boot example consumes
+confirmed `damaged` events, follows the local player after simulation and exposes
+settings/pause/resume/dispose. The reusable rig supports offset/FOV shot changes
+and an optional center-line blocker query, not a full collision sweep.
+
+`navigator.vibrate` is a best-effort local-browser capability, not guaranteed
+hardware feedback. It may be absent, return false or throw. It uses milliseconds.
+The implementation does not provide Gamepad actuator output or remote Browser
+Serving vibration transport. Preserve audio/animation/static outcome cues when
+unsupported; never claim a recording proves physical vibration. Other engines
+must use their existing APIs and document units (e.g. Godot duration seconds),
+capability detection and cancellation; do not claim those adapters are implemented.
+
+## Acceptance
+
+Test confirmed hit versus miss, event replay/overlap, limits and return to base
+pose, 30/60/120 Hz duration/damping, spawn and shot changes, pause/resume, focus
+loss and disposal, unsupported/rejected vibration, live reduced-motion changes,
+and disabled feedback. Inspect camera walls/corners/ceilings/slopes in actual
+play; record and review action readability and discomfort. Report missing hardware,
+collision-volume validation or live play evidence instead of calling them passed.

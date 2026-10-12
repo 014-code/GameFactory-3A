@@ -91,7 +91,8 @@ export class ArenaFighterEntity extends A3GameControllableEntity {
       0,
       Math.cos(inputState.yaw),
     );
-    const right = new THREE.Vector3(forward.z, 0, -forward.x);
+    // Camera right is forward cross world-up, matching the chase view.
+    const right = new THREE.Vector3(-forward.z, 0, forward.x);
     this.desired
       .copy(forward)
       .multiplyScalar(inputState.moveY)

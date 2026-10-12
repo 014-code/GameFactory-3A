@@ -125,6 +125,20 @@ describe('ArenaFighterEntity', () => {
     expect(fighter.motion.grounded).toBe(true);
   });
 
+  it('moves screen-right and forward away from the aligned chase camera', () => {
+    host.camera.position.set(0, 4, -7);
+    host.camera.lookAt(0, 1.2, 0);
+    host.camera.updateMatrixWorld(true);
+    const right = createFighter(host, collision);
+    right.applyRuntimeInput(createRuntimeInputState({ moveX: 1, yaw: 0, sequence: 1 }));
+    for (let i = 0; i < 30; i++) right.tick(1 / 60);
+    expect(right.object.position.clone().project(host.camera).x).toBeGreaterThan(0);
+    const forward = createFighter(host, collision);
+    forward.applyRuntimeInput(createRuntimeInputState({ moveY: 1, yaw: 0, sequence: 1 }));
+    for (let i = 0; i < 30; i++) forward.tick(1 / 60);
+    expect(forward.object.position.distanceTo(host.camera.position)).toBeGreaterThan(new THREE.Vector3().distanceTo(host.camera.position));
+  });
+
   it('advances an attack through windup, active, and recovery', () => {
     const fighter = createFighter(host, collision);
     const events = [];

@@ -1233,3 +1233,12 @@ Install scripts: `scripts/engine_install/three_js/`, not `scripts/three_js/`. Ve
 
 Compare Python public methods and JS root exports against sections 2/18 after API changes.
 Update signatures, contracts, limits, and indexes together; exclude implementation algorithms and investigation history.
+
+## Game feel and playable cameras
+
+For confirmed-event feedback and camera framing use public `A3GameFeedback` and
+`A3GameCameraRig` exports. Follow `agent_skills/game-feel/SKILL.md` and the plugin
+README section “Gameplay feedback and camera framing” for units, limits, settings
+and cleanup. They are presentation components, not Mechanic rules. The arena
+example demonstrates event consumption and pause/exit cleanup. Local-browser
+vibration is optional; Gamepad/remote vibration transport is not provided.
