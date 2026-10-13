@@ -368,3 +368,23 @@ Its chase shot sits behind and beside the +Z-forward player; movement follows
 the base framing and lateral input matches screen right after shot changes.
 Run `npm ci && npm test` from this plugin directory to check framework and example
 behavior without a GPU. Physical haptics and visual comfort require live testing.
+# Action-aware camera director
+
+`A3GameActionCameraDirector` is exported at root and `./engine`. Construct with an
+unparented PerspectiveCamera and optional `{ yaw, playerHeight, targetHeight,
+minDistance, maxDistance, response, occlusionTargets, clearance }`. Call
+`update(deltaSeconds, playerPosition, targetPosition, { mode, cut, reducedMotion,
+offset, fovKick })` after simulation. Modes are `follow`, `windup`, `impact`,
+`airborne`, `landing`, `recovery`; the caller owns confirmed combat state.
+Offsets/FOV kicks may come from `A3GameFeedback.update`. Repeated mode values do
+not restart the transition clock. Use `cut` on spawn/teleport; call `clear` before
+pause and stop updates while paused. `dispose` is idempotent and stops later writes.
+
+The director fits a conservative two-actor sphere and makes bounded same-side
+arcs without roll. Reduced motion uses stable follow parameters and suppresses
+optional offsets/FOV pulses. Set actor heights for actual meshes/weapons, choose
+distance bounds for the game, and inspect `framingLimited` when the cap prevents
+the requested fit. Blockers retain the rig's center-line limitation; no camera
+volume sweep, gameplay changes, launch physics or automatic target discovery are
+provided. `examples/boss-action-demo/` integrates the public API with an original
+procedural action scene, actual input and canvas recording.

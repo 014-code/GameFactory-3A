@@ -77,6 +77,7 @@ export {
   A3GameCollisionProbe,
   A3GameFeedback,
   A3GameCameraRig,
+  A3GameActionCameraDirector,
   A3GameCinematicPlayer,
   A3GameEmitterShape,
   A3GameEnvironmentPreset,

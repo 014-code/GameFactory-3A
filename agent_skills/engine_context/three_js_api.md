@@ -1242,3 +1242,12 @@ README section “Gameplay feedback and camera framing” for units, limits, set
 and cleanup. They are presentation components, not Mechanic rules. The arena
 example demonstrates event consumption and pause/exit cleanup. Local-browser
 vibration is optional; Gamepad/remote vibration transport is not provided.
+# Action-aware camera presentation
+
+`A3GameActionCameraDirector` from `@a3game/playable` accepts caller-owned
+`follow/windup/impact/airborne/landing/recovery` modes, both actor positions and
+optional `A3GameFeedback.update(delta)` offsets. Use it as the single camera writer;
+it does not generate attacks, launch physics or confirmed events. See the runtime
+README and `engine_adapters/three_js/examples/boss-action-demo/` for vertical action,
+live input and reduced-motion handling. Actor heights, distance bounds and explicit
+blockers are configurable; its blocker query remains center-line only.

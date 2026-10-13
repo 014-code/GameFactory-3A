@@ -91,3 +91,4 @@ export { A3GameCinematicPlayer } from './cinematic-player.js';
 export { A3GameRuntimeChannel } from './runtime-channel.js';
 
 export { A3GameFeedback, A3GameCameraRig } from './game-feel.js';
+export { A3GameActionCameraDirector } from './action-camera.js';

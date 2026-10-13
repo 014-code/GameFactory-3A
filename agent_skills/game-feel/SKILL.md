@@ -46,12 +46,29 @@ prove clearance for the camera volume. Do not add an unrelated engine dependency
 
 ## Existing Three.js implementation
 
-Public exports: `A3GameFeedback` and `A3GameCameraRig` from `@a3game/playable`.
+Public exports: `A3GameFeedback`, `A3GameCameraRig` and
+`A3GameActionCameraDirector` from `@a3game/playable`.
 Read `engine_adapters/three_js/plugin/A3GamePlayable/src/engine/game-feel.js` and
 its README contract before using them. The arena fighter boot example consumes
 confirmed `damaged` events, follows the local player after simulation and exposes
 settings/pause/resume/dispose. The reusable rig supports offset/FOV shot changes
 and an optional center-line blocker query, not a full collision sweep.
+
+For action encounters, consume confirmed Mechanic phase/state: approach,
+wind-up, impact, airborne, landing and recovery. Frame both actor bounds including
+weapons and vertical displacement; do not validate only a horizontal walk. Keep
+same-side arcs bounded and return to a stable playable shot after a beat. Camera
+shots must not steal movement/aim authority. Use recoil, animation, contact
+effects, damage/health cues and optional audio together; shake alone is not hit
+feel. Reduced motion suppresses optional arcs/FOV pulses/particles, while essential
+movement and static outcome cues remain readable. Never freeze gameplay for drama.
+
+`A3GameActionCameraDirector` selects bounded same-side shots from caller-owned
+modes and fits a conservative two-actor sphere. Its distance cap can still limit
+framing; inspect `framingLimited`. The original `boss-action-demo/` shows scripted
+vertical combat and separate live move/jump/attack inputs with the public runtime.
+Its authored action comparison is separate from the preserved independent
+generation pair; do not label it as another generated-skill experiment.
 
 `navigator.vibrate` is a best-effort local-browser capability, not guaranteed
 hardware feedback. It may be absent, return false or throw. It uses milliseconds.
