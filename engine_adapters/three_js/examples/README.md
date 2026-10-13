@@ -147,8 +147,7 @@ dependency synchronization that `plugin.install` performs.
 `game-feel-comparison/` is an inspection fixture, not an installable Gameplay
 Package. It compares identical traces with main's Orbit view and the arena chase
 profile, provides raw 30/60/120 Hz framing measurements, and runs in the plugin
-Vitest suite. See its README for replay and measurement commands, and
-`agent_skills/game-feel/camera_comparison.md` for the operator tuning loop.
+Vitest suite. See its README for replay and measurement commands.
 
 `generated-camera-study/` preserves a separate, single independent native-agent
 camera-module pair with skill context disabled/enabled, full prompts, raw outputs,

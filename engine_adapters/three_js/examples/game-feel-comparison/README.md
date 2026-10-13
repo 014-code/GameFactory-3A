@@ -33,7 +33,7 @@ Neither is a depth-buffer visibility test or a comfort score. Browser replay use
 actual rendering timestamps, so its sample count and averages can differ from the
 deterministic fixed-rate measurements. The regression gates apply to this trace.
 
-See `agent_skills/game-feel/camera_comparison.md` for the operator's controlled
-baseline/candidate capture and skill-adjustment loop. This is evidence for a
+Use `agent_skills/game-feel/SKILL.md` for controlled recordings and tuning.
+This is evidence for a
 reference camera change, not an end-to-end generated-skill effectiveness claim.
 No physical vibration or volumetric collision is evaluated here.

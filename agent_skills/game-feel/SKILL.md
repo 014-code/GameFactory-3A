@@ -63,9 +63,13 @@ capability detection and cancellation; do not claim those adapters are implement
 
 ## Compare Before / After and Tune
 
-Read `agent_skills/game-feel/camera_comparison.md` when validating or tuning a
-camera change. Keep controlled baseline/candidate traces and operator observations;
-update the skill from evidence instead of treating passing tests as better feel.
+Keep baseline/candidate recordings with the same brief, model settings, assets,
+scene, viewport and action trace. Preserve prompts and raw outputs for generation
+comparisons. Report readability and comfort observations beside objective metrics;
+passing tests alone do not establish better feel. Change one presentation setting
+at a time, rerun the same trace, and update this skill from reproducible observations.
+Use `engine_adapters/three_js/examples/generated-camera-study/` for the bounded
+independent camera-module pair, with its explicit limitations.
 Choose a lateral composition when player/target silhouettes obscure the action,
 then verify both actors in the actual game. Numeric defaults stay game-specific.
 

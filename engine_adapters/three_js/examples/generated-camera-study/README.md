@@ -32,6 +32,29 @@ at 2.000004 seconds; full replay, seek and reduced motion had no console errors.
 The generated modules can be rerun; regenerating them requires two independent
 agents with the preserved prompts and matched model settings.
 
+## Actual comparison video
+
+With the local Vite server running, `Record 18-second comparison` records only
+the rendered canvases and version/stage captions, then saves into ignored
+`captures/`. It prefers MP4/H.264 when MediaRecorder supports it, otherwise WebM.
+The local development-only POST receiver accepts MP4/WebM up to 25 MiB; it is
+bound to localhost and does not accept a filesystem path from the browser.
+
+The three phases are the same eight-second movement/impact trace, two seconds
+paused at a freshly replayed active impulse at simulation t=3.05, and eight
+seconds of the same trace with reduced motion. The middle phase intentionally
+holds the paused runtime pose; the clip is a real canvas recording, not still
+images edited into a slideshow. Captions identify the unchanged source modules
+at `5878ca7` and treatment skill context at `afa1de1`. These modules remain
+byte-for-byte identical in the final PR revision.
+
+The delivered `GameFactory3A-camera-skill-before-after.mp4` is a 17.97-second,
+1280x480, 30 fps H.264 Constrained Baseline / yuv420p export with faststart. Full
+decode and frames at 2/9/14 seconds were checked. Video is delivered separately,
+not committed as a binary. The earlier `camera_comparison.md` was removed at
+reviewer's request; its path survives only inside the immutable historical
+treatment prompt, which represents actual generation context at `afa1de1`.
+
 | 60 Hz, motion enabled | Control | Skill context |
 |---|---:|---:|
 | Both projected actor boxes fully in frame | 100% | 100% |
