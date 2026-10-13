@@ -141,3 +141,11 @@ three.plugin.install(
 `plugin.install` consumes a repository task identity, not a path inside
 this directory. Copying an example by hand bypasses the registry and the
 dependency synchronization that `plugin.install` performs.
+
+## Camera comparison fixture
+
+`game-feel-comparison/` is an inspection fixture, not an installable Gameplay
+Package. It compares identical traces with main's Orbit view and the arena chase
+profile, provides raw 30/60/120 Hz framing measurements, and runs in the plugin
+Vitest suite. See its README for replay and measurement commands, and
+`agent_skills/game-feel/camera_comparison.md` for the operator tuning loop.

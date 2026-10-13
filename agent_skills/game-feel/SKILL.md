@@ -1,8 +1,3 @@
----
-name: game-feel
-description: Design and implement gameplay feedback and playable camera framing, using confirmed Mechanic events and the selected engine runtime.
----
-
 # Game Feel and Playable Cameras
 
 Read for impact/action feedback, device vibration, screen dynamics, camera follow,
@@ -65,6 +60,14 @@ Serving vibration transport. Preserve audio/animation/static outcome cues when
 unsupported; never claim a recording proves physical vibration. Other engines
 must use their existing APIs and document units (e.g. Godot duration seconds),
 capability detection and cancellation; do not claim those adapters are implemented.
+
+## Compare Before / After and Tune
+
+Read `agent_skills/game-feel/camera_comparison.md` when validating or tuning a
+camera change. Keep controlled baseline/candidate traces and operator observations;
+update the skill from evidence instead of treating passing tests as better feel.
+Choose a lateral composition when player/target silhouettes obscure the action,
+then verify both actors in the actual game. Numeric defaults stay game-specific.
 
 ## Acceptance
 

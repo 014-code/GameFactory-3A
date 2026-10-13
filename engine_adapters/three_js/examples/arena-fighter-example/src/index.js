@@ -26,6 +26,8 @@ import {
   ArenaMatchRules,
 } from './factory.js';
 
+import { createArenaCameraProfile } from './camera-profile.js';
+
 export { ArenaFighterEntity } from './entity.js';
 export { ArenaFighterEntityFactory, ArenaMatchRules } from './factory.js';
 
@@ -69,8 +71,7 @@ export async function startArenaFighter(options = {}) {
   let input = null;
   const feedback = new A3GameFeedback(options.feedback);
   const cameraRig = new A3GameCameraRig(host.camera, {
-    offset: new THREE.Vector3(2.5, 4, -7),
-    fov: 55, occlusionTargets: sceneLoader.collisionTargets,
+    ...createArenaCameraProfile(), occlusionTargets: sceneLoader.collisionTargets,
   });
   let paused = false;
   let disposed = false;
