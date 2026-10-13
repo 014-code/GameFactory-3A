@@ -77,3 +77,8 @@ loss and disposal, unsupported/rejected vibration, live reduced-motion changes,
 and disabled feedback. Inspect camera walls/corners/ceilings/slopes in actual
 play; record and review action readability and discomfort. Report missing hardware,
 collision-volume validation or live play evidence instead of calling them passed.
+
+Pause/feedback-off checks must inspect the camera immediately after the change,
+while an impulse is active. Merely stopping future updates can freeze a residual
+translation/FOV cue. Compare against the no-impact base pose at the same time;
+clear optional offsets before suspending the writer.

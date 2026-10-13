@@ -74,7 +74,8 @@ are not rendered-occlusion or comfort ratings.
 
 The reference demonstrates a concrete framing improvement and lets an operator
 inspect/tune the actual profile. It does not prove that invoking the skill improves
-every generated game. A controlled two-generation study, final-art comfort review,
+every generated game. The bounded independent camera-module pair below adds
+generation evidence; full game-pipeline trials, final-art comfort review,
 physical haptics and volumetric camera collision remain unverified.
 
 The observed centered chase view put the collinear opponent behind the player;
@@ -82,3 +83,27 @@ the arena's lateral offset improves separation in the whitebox. Accordingly,
 choose a lateral composition when actors obscure the action, then inspect both
 actors during the game's own action trace. Do not prescribe that offset for every
 genre, and prefer an already stable/readable shot when the comparison shows no gain.
+
+## Bounded independent generation evidence
+
+`engine_adapters/three_js/examples/generated-camera-study/` preserves one raw
+camera-module output per condition, both full prompts, hashes and measurements.
+Two native agents used the same inherited model with no model override and no
+conversation history; neither was supplied the other output. They received the
+same task, API, assets and trace. Treatment alone received this skill's text at
+`afa1de1`; the unique output paths and condition labels are also recorded. Seed,
+temperature and backend model identifier are not exported by that interface.
+Isolation was instructed, not an OS filesystem boundary.
+
+Both outputs keep both actors fully in frame. At 60 Hz, treatment lowers mean
+projected actor-bounds IoU from 0.0843 to zero, while mean player-center error
+increases from 0.1716 to 0.1739 NDC. Report both tradeoffs. Raw control leaves
+an active impulse frozen on pause/feedback-off; treatment clears immediately.
+This observation prompted the explicit immediate-base-pose acceptance check in
+the skill. Preserve the original outputs; do not silently repair the baseline.
+
+This is a single pair of generated camera modules, not a complete game generated
+through the pipeline, repeated statistical study, blinded operator rating or
+comfort/hardware test. Common task requirements already mention reduced motion
+and cleanup; only the added skill context differs. Do not generalize one favorable
+separation result to every game or describe every metric as improved.
