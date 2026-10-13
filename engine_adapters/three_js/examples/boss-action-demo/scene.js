@@ -50,7 +50,7 @@ export function createBossScene() {
     player.group.rotation.y = Math.PI / 2;
     [player, boss].forEach((a, index) => {
       a.legs.forEach((leg, i) => { leg.rotation.x = Math.sin(state.time * 6 + i * Math.PI) * (index ? 0.08 : 0.25); });
-      a.weapon.rotation.z = -0.6 + (index ? 0 : state.attackPose * 1.7);
+      a.weapon.rotation.x = -0.6 + (index ? 0 : state.attackPose * 1.7);
       a.arms[1].rotation.z = -state.attackPose * 0.6;
       shadows[index].position.x = a.group.position.x; shadows[index].position.z = a.group.position.z;
       shadows[index].scale.setScalar(1 / (1 + a.group.position.y * 0.1));

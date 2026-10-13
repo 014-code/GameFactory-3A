@@ -42,7 +42,9 @@ confirms damage only within range and outside cooldown, then presentation consum
 that outcome. Input does not rotate with the cinematic camera. Pause, blur and
 exit clear impulses/input; resume/replay restores feedback. Reduced motion keeps
 essential movement, hit numbers and health while suppressing optional camera arcs,
-FOV pulses, particles and recoil. Hardware vibration and audio are not evaluated.
+FOV pulses, particles and recoil. Optional original synthesized hit audio uses no
+microphone, recordings or external assets; its stream is included in the demo take.
+Hardware vibration and audio-device latency/subjective quality are not evaluated.
 
 ## Real recording
 

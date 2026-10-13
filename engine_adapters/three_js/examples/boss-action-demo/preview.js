@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { A3GameFeedback, A3GameActionCameraDirector } from '@a3game/playable';
 import { encounterAt, BossEncounter, IMPACTS, DURATION } from './encounter.js';
 import { createBossScene } from './scene.js';
+import { createImpactAudio } from './impact-audio.js';
 
 const world = createBossScene();
 const base = new THREE.PerspectiveCamera(55, 16 / 9, 0.1, 2000);
@@ -13,6 +14,7 @@ const renderers = ['base', 'updated'].map(id => {
   return renderer;
 });
 const feedback = new A3GameFeedback({ haptics: false });
+const audio = createImpactAudio();
 const director = new A3GameActionCameraDirector(updated);
 const status = document.getElementById('status'), keys = new Set();
 const reduced = document.getElementById('reduced'); reduced.checked = feedback.reducedMotion;
@@ -22,13 +24,14 @@ const revision = /^[0-9a-f]{7,40}$/.test(new URLSearchParams(location.search).ge
   ? new URLSearchParams(location.search).get('revision').slice(0, 7) : 'local';
 const combined = document.createElement('canvas'); combined.width = 1280; combined.height = 480;
 const ctx = combined.getContext('2d');
-const mime = ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp9']
+const mime = ['video/mp4', 'video/mp4;codecs=avc1.42E01E', 'video/webm;codecs=vp9']
   .find(type => globalThis.MediaRecorder?.isTypeSupported(type));
 document.getElementById('record').disabled = !mime;
 
 function render(state, dt, { cut = false, reducedMotion = reduced.checked, enabled = document.getElementById('feedback').checked } = {}) {
   const confirmed = live ? state.impact : IMPACTS.some(t => time - dt < t && time >= t);
   if (confirmed) feedback.trigger({ strength: 0.075, duration: 0.22, fovKick: 1.2 });
+  if (confirmed && document.getElementById('sound').checked) audio.hit();
   director.update(dt, state.player, state.target, { mode: state.mode, cut, reducedMotion, ...feedback.update(dt) });
   world.update(state, reducedMotion || !enabled);
   [base, updated].forEach((camera, i) => renderers[i].render(world.scene, camera));
@@ -80,10 +83,11 @@ function frame(now) {
   }
   handle = requestAnimationFrame(frame);
 }
-document.getElementById('replay').onclick = () => { if (recording) return; live = false; paused = false; reset(); };
-document.getElementById('live').onclick = () => { if (recording) return; live = true; paused = false; reset(); };
+document.getElementById('replay').onclick = () => { if (recording) return; audio.start(); live = false; paused = false; reset(); };
+document.getElementById('live').onclick = () => { if (recording) return; audio.start(); live = true; paused = false; reset(); };
 document.getElementById('pause').onclick = () => {
   if (recording) return; paused = !paused; keys.clear(); feedback.setSuspended(paused); director.clear(); previous = null;
+  audio.clear();
   document.getElementById('pause').textContent = paused ? 'Resume' : 'Pause';
 };
 for (const id of ['reduced', 'feedback']) document.getElementById(id).onchange = () => {
@@ -91,15 +95,18 @@ for (const id of ['reduced', 'feedback']) document.getElementById(id).onchange =
   feedback.setPreferences({ enabled: document.getElementById('feedback').checked, reducedMotion: reduced.checked });
   director.clear();
 };
+document.getElementById('sound').onchange = event => { if (event.target.checked) audio.start(); else audio.clear(); };
 document.getElementById('seek').oninput = event => {
   if (recording) return; live = false; paused = true; keys.clear(); feedback.clear();
   time = Number(event.target.value); render(encounterAt(time), 0, { cut: true });
   feedback.setSuspended(true); document.getElementById('pause').textContent = 'Resume';
 };
 document.getElementById('record').onclick = () => {
+  audio.start();
   live = false; paused = false; feedback.setSuspended(false); reset();
   recordingStart = null; recordingPhase = -1; captureComplete = false; const chunks = [];
-  stream = combined.captureStream(30); recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 3500000 });
+  stream = combined.captureStream(30); audio.tracks().forEach(track => stream.addTrack(track.clone()));
+  recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 3500000 });
   recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
   recorder.onstop = async () => {
     recording = false; stream.getTracks().forEach(t => t.stop());
@@ -120,11 +127,12 @@ function keydown(event) {
 function keyup(event) { keys.delete(event.key.toLowerCase()); }
 function blur() {
   keys.clear(); paused = true; feedback.setSuspended(true); director.clear();
+  audio.clear();
   if (recorder?.state === 'recording') recorder.stop();
 }
 window.addEventListener('keydown', keydown); window.addEventListener('keyup', keyup); window.addEventListener('blur', blur);
 window.addEventListener('pagehide', () => {
-  cancelAnimationFrame(handle); keys.clear(); feedback.dispose(); director.dispose();
+  cancelAnimationFrame(handle); keys.clear(); feedback.dispose(); director.dispose(); audio.dispose();
   if (recorder?.state === 'recording') recorder.stop(); stream?.getTracks().forEach(t => t.stop());
   window.removeEventListener('keydown', keydown); window.removeEventListener('keyup', keyup); window.removeEventListener('blur', blur);
   renderers.forEach(r => r.dispose()); world.dispose();

@@ -6,6 +6,9 @@ export function encounterAt(time) {
   const t = Math.max(0, Math.min(DURATION, time));
   const player = new THREE.Vector3(-3 + Math.min(t / 2, 1) * 2, 0, 0);
   const target = new THREE.Vector3(1.2, 0, 0);
+  // Contact choreography: close the sword's reach before the confirmed strike.
+  if (t >= 2.7 && t < 3.4) player.x += 1.1 * Math.sin((t - 2.7) / 0.7 * Math.PI);
+  if (t >= 3 && t < 3.4) target.x += 0.5 * Math.sin((t - 3) / 0.4 * Math.PI);
   let mode = 'follow', label = 'Approach / readable combat framing';
   if (t >= 2 && t < 3) { mode = 'windup'; label = 'Wind-up / keep action silhouettes separated'; }
   if (t >= 3 && t < 3.4) { mode = 'impact'; label = 'Confirmed strike / recoil, sparks and bounded camera impulse'; }
