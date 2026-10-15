@@ -294,3 +294,97 @@ A second, quieter trap: a raycast reads `matrixWorld`, and the renderer
 only refreshes it at render time. An object that spawns or moves and is
 probed in the same frame must call `object.updateMatrixWorld(true)`
 first, or it is tested at the origin.
+
+## Gameplay feedback and camera framing
+
+`A3GameFeedback` consumes confirmed gameplay events and returns camera-local
+translation/FOV pulses; it never changes simulation or mutates the camera.
+`A3GameCameraRig` is the final camera owner and combines a separately stored base
+pose with those pulses. Use an unparented camera and detach other controls.
+
+```js
+import * as THREE from 'three';
+import { A3GameFeedback, A3GameCameraRig } from '@a3game/playable';
+
+host.detachControls();
+const feedback = new A3GameFeedback({ haptics: false, intensity: 0.6 });
+const rig = new A3GameCameraRig(host.camera, {
+  offset: new THREE.Vector3(0, 4, 7),
+  focusOffset: new THREE.Vector3(0, 1.2, 0),
+  response: 8, fov: 55, occlusionTargets: staticCameraBlockers,
+});
+const offEvent = mechanic.onEvent(event => {
+  if (event.type === 'confirmed_impact' && event.recipientId === localPlayerId) {
+    feedback.trigger({ strength: 0.08, duration: 0.18, fovKick: 1, vibrationMs: 35 });
+  }
+});
+const offRender = host.onRender(dt => {
+  rig.update(dt, playerFocusWorldPosition(), {
+    ...feedback.update(dt), reducedMotion: feedback.reducedMotion,
+  });
+});
+// Activity switch: exponential blend from current base framing.
+rig.setShot({ offset: new THREE.Vector3(2, 2, 4), fov: 45 });
+// Settings apply immediately. null reducedMotion restores the OS preference.
+feedback.setPreferences({ reducedMotion: true, haptics: false });
+rig.clear();
+// Before host.stop():
+feedback.setSuspended(true);
+rig.clear();
+// On resume: feedback.setSuspended(false), then host.start().
+// On scene exit:
+offEvent(); offRender(); feedback.dispose(); rig.clear();
+```
+
+Time arguments use seconds; offsets use world units; FOV uses degrees; vibration
+uses milliseconds. Pulses replace instead of stacking; translation amplitude is
+capped at 0.3 per axis, FOV at 4 degrees, duration at 0.5 seconds, vibration at
+100 ms with a 0.1-second retrigger limit. Intensity is clamped to 0–1. Disabled
+feedback/intensity 0 suppress all pulses. Reduced motion suppresses optional
+translation/FOV dynamics and cuts framing changes; opt-in haptics remain independent.
+The OS media query is tracked live unless `reducedMotion` explicitly overrides it.
+Blur/hidden pages cancel vibration and pulses; manual suspension survives focus
+changes. Disposal cancels vibration and removes all browser listeners.
+
+`navigator.vibrate` is optional and may reject a request or throw; those cases
+leave visual/static feedback available. This is local-browser device vibration,
+not Gamepad rumble or remote Browser Serving transport. Hardware acceptance is
+not established by an API return value. Pair motion with health/animation/audio
+cues so disabled or unsupported feedback loses no gameplay information.
+
+The rig follows a world-space focus with configurable composition offsets and
+shot FOV, supports explicit `cut`, and handles perspective/orthographic pose
+updates. Orthographic framing size remains owned by `host.setFrustumHeight()`.
+Optional `occlusionTargets` run a center-line ray against explicit blockers after
+presentation offsets, shortening the boom by `clearance` world units. Blocker world matrices are updated before the query. This does not sweep the camera/near-plane
+volume, handle one-sided backfaces, or guarantee corner clearance; use an engine
+collision sweep for tight interiors. Keep gameplay aiming/picking on a separate
+base aim rather than the shaken display camera.
+
+The arena example exposes `feedback`, `cameraRig`, `setFeedbackPreferences`,
+`pause`, `resume`, and `dispose`. It reacts only to actual `damaged` events
+involving the local player, retaining the static HP bar when motion is disabled.
+Its chase shot sits behind and beside the +Z-forward player; movement follows
+the base framing and lateral input matches screen right after shot changes.
+Run `npm ci && npm test` from this plugin directory to check framework and example
+behavior without a GPU. Physical haptics and visual comfort require live testing.
+# Action-aware camera director
+
+`A3GameActionCameraDirector` is exported at root and `./engine`. Construct with an
+unparented PerspectiveCamera and optional `{ yaw, playerHeight, targetHeight,
+minDistance, maxDistance, response, occlusionTargets, clearance }`. Call
+`update(deltaSeconds, playerPosition, targetPosition, { mode, cut, reducedMotion,
+offset, fovKick })` after simulation. Modes are `follow`, `windup`, `impact`,
+`airborne`, `landing`, `recovery`; the caller owns confirmed combat state.
+Offsets/FOV kicks may come from `A3GameFeedback.update`. Repeated mode values do
+not restart the transition clock. Use `cut` on spawn/teleport; call `clear` before
+pause and stop updates while paused. `dispose` is idempotent and stops later writes.
+
+The director fits a conservative two-actor sphere and makes bounded same-side
+arcs without roll. Reduced motion uses stable follow parameters and suppresses
+optional offsets/FOV pulses. Set actor heights for actual meshes/weapons, choose
+distance bounds for the game, and inspect `framingLimited` when the cap prevents
+the requested fit. Blockers retain the rig's center-line limitation; no camera
+volume sweep, gameplay changes, launch physics or automatic target discovery are
+provided. `examples/boss-action-demo/` integrates the public API with an original
+procedural action scene, actual input and canvas recording.

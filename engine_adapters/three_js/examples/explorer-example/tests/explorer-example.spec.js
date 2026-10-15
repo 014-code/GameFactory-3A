@@ -20,6 +20,7 @@ import { createRuntimeInputState } from '@a3game/playable';
 import { ExplorerEntity, EXPLORER_PROFILE, HELD_ANCHORS } from '../src/explorer.js';
 import { ArrowPool } from '../src/arrow.js';
 import { FollowCamera } from '../src/index.js';
+import { FollowCamera as FactoryFollowCamera } from '../src/factory.js';
 import {
   buildTerrain,
   buildWorld,
@@ -324,4 +325,21 @@ describe('ArrowPool', () => {
     expect(pool.countActive()).toBe(0);
     pool.dispose();
   });
+});
+
+
+describe('follow damping across frame rates', () => {
+  for (const Camera of [FollowCamera, FactoryFollowCamera]) {
+    it('converges equally at 30, 60 and 120 Hz', () => {
+      const focus = [30, 60, 120].map(hz => {
+        const entity = { object: new THREE.Object3D() };
+        const camera = new Camera({ camera: new THREE.PerspectiveCamera() }).follow(entity);
+        entity.object.position.set(10, 3, 5);
+        for (let i = 0; i < hz; i++) camera.update(1 / hz);
+        return camera.focus;
+      });
+      expect(focus[1].distanceTo(focus[0])).toBeLessThan(1e-10);
+      expect(focus[2].distanceTo(focus[0])).toBeLessThan(1e-10);
+    });
+  }
 });

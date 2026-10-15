@@ -4,6 +4,10 @@ Generate one task's game-owned Mechanic implementation inside the prepared
 workspace. The result owns gameplay behavior and a presentation-independent
 public contract; it does not own UI, execution, or evaluation.
 
+For game-feel or camera requests, read `agent_skills/game-feel/SKILL.md`.
+Publish confirmed impact/action signals and camera-relevant state through the
+Mechanic contract; keep visual and device feedback in event consumers.
+
 ## Authority And Inputs
 
 Read before editing:

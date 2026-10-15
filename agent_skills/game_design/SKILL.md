@@ -30,6 +30,13 @@ focus here on what happens, when it happens, and what each chapter needs.
    loop before detailing later chapters. Revise the story and dependencies from
    actual play evidence.
 
+## Feedback and Camera Handoff
+
+For action feedback, vibration, screen dynamics or playable camera work, read
+`agent_skills/game-feel/SKILL.md`. Include per-action confirmed-event/cue profiles
+and per-activity camera shots in the game workspace, with reduced-motion defaults
+and measurable acceptance. Reference asset IDs rather than embedding engine code.
+
 ## Asset Display within Each Genre
 
 Keep player-facing asset display pages inside the matching genre template, alongside
