@@ -47,6 +47,7 @@ from typing import Any, Optional
 
 from models.common import cloud_api
 from models.common.glb_utils import glb_summary
+from models.common.task_recovery import PendingTaskStore
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +104,8 @@ class TripoModel:
         timeout:    [C6] Seconds to wait for one generation task.
         poll_interval: Seconds between status polls.
         max_retries: [C9] Extra attempts for retryable HTTP failures.
-        cache_dir:  [C8] Directory for the response cache. None disables it.
+        cache_dir:  [C8] Response cache and accepted-task recovery directory.
+                    None disables both. See docs/tripo-task-recovery.md.
         output_format: "glb" is produced natively. Any other format needs the
                     conversion endpoint — see `convert_path`.
         convert_path: API path of the format-conversion endpoint. Left as None
@@ -410,30 +412,67 @@ class TripoModel:
         })
         cached = self._cache.get(cache_key, ext=self.output_format)
         if cached is not None:
-            self.last_call_info = {
-                "provider": self.PROVIDER, "cached": True, "cache_key": cache_key,
-                "bytes": len(cached), **glb_summary(cached),
-            }
-            return cached
+            return self._cached_result(cached, cache_key)
+
+        if not self._cache.enabled:
+            return self._generate(cache_key, payload, png, image_url, verbose)
+
+        # Scope pending tasks to the endpoint and credential, without persisting
+        # either the credential or a signed URL. Completed-cache keys stay
+        # compatible with earlier releases.
+        client = self.client
+        # An existing client retains its original credentials even if the
+        # environment changes between calls. Scope to the client actually used.
+        key = getattr(client, "_api_key", None) or cloud_api.require_api_key(
+            self.api_key, "TRIPO_API_KEY", SIGNUP_URL, who="TripoModel")
+        scope = cloud_api.request_hash({
+            "request": cache_key,
+            "api_base": getattr(client, "base_url", self.api_base).rstrip("/"),
+            "credential_sha256": cloud_api.bytes_hash(key.encode("utf-8")),
+        })
+        store = PendingTaskStore(self._cache.root, scope)
+        with store.lock(timeout=self.timeout):
+            # A caller ahead of us may have completed the very same request.
+            cached = self._cache.get(cache_key, ext=self.output_format)
+            if cached is not None:
+                return self._cached_result(cached, cache_key)
+            task_id = store.load()
+            try:
+                return self._generate(cache_key, payload, png, image_url, verbose,
+                                      store=store, task_id=task_id)
+            except cloud_api.CloudAPIError as exc:
+                # A GET/download error may not carry the accepted task ID.
+                accepted = task_id or store.load()
+                if accepted:
+                    exc.task_id = exc.task_id or accepted
+                    exc.args = (f"{exc} Task {accepted} is checkpointed at {store.path}; "
+                                "rerun the same input to resume. Remove that file only "
+                                "to explicitly allow a new paid task.",)
+                raise
+
+    def _cached_result(self, data: bytes, cache_key: str) -> bytes:
+        self.last_call_info = {
+            "provider": self.PROVIDER, "cached": True, "cache_key": cache_key,
+            "resumed": False, "bytes": len(data), **glb_summary(data),
+        }
+        return data
+
+    def _generate(self, cache_key: str, payload: dict, png: Optional[bytes],
+                  image_url: Optional[str], verbose: bool, *,
+                  store: Optional[PendingTaskStore] = None,
+                  task_id: Optional[str] = None) -> bytes:
+        """Resume a checkpointed task, or submit and checkpoint before polling."""
+        resumed = task_id is not None
+        created = {}
 
         t0 = time.time()
-        if png is not None:
-            # `input` takes a file_token, a public URL or a previous task id.
-            payload["input"] = self._upload_image(png)
-            endpoint = "/generation/image-to-model"
-        elif image_url:
-            payload["input"] = image_url
-            endpoint = "/generation/image-to-model"
+        if resumed:
+            if verbose:
+                print(f"[tripo] resuming task {task_id}")
         else:
-            endpoint = "/generation/text-to-model"
-
-        created = self._unwrap(self.client.request("POST", endpoint, json_body=payload))
-        task_id = str(created.get("task_id") or created.get("id") or "")
-        if not task_id:
-            raise cloud_api.CloudAPIError(
-                f"{endpoint} accepted the request but returned no task_id: {created}")
-        if verbose:
-            print(f"[tripo] task {task_id} submitted ({endpoint})")
+            task_id, created = self._submit(payload, png, image_url, verbose)
+            if store is not None:
+                store.save(task_id)
 
         # Some responses already carry a finished task; only poll when they do not.
         state = str(created.get("status", "")).lower()
@@ -461,16 +500,16 @@ class TripoModel:
             "elapsed_sec": round(elapsed, 2),
             "credits": task.get("credits_consumed", task.get("credits")),
             "cached": False,
+            "resumed": resumed,
             "cache_key": cache_key,
             # The provider's own render — see the note in meshy_model.py.
             "preview_url": (task.get("output") or {}).get("rendered_image_url"),
             **info,
         }
-        # R9.8 — one line per billed call: what it cost and what it produced.
         logger.info(
-            "[tripo] task=%s model=%s %.1fs credits=%s triangles=%s bytes=%s",
+            "[tripo] task=%s model=%s %.1fs credits=%s triangles=%s bytes=%s resumed=%s",
             task_id, self.model_path, elapsed, self.last_call_info.get("credits"),
-            info.get("triangles"), len(data),
+            info.get("triangles"), len(data), resumed,
         )
         if verbose:
             print(f"[tripo] {self.last_call_info}")
@@ -479,7 +518,36 @@ class TripoModel:
             "provider": self.PROVIDER, "payload": payload,
             **{k: v for k, v in self.last_call_info.items() if k != "cache_key"},
         }, ext=self.output_format)
+        if store is not None:
+            try:
+                store.clear()
+            except OSError:
+                # The completed cache is authoritative; a stale checkpoint is
+                # harmless and must not turn a successful generation into failure.
+                logger.warning("[tripo] could not remove checkpoint %s", store.path)
         return data
+
+    def _submit(self, payload: dict, png: Optional[bytes],
+                image_url: Optional[str], verbose: bool) -> tuple[str, dict]:
+        if png is not None:
+            # `input` takes a file_token, a public URL or a previous task id.
+            payload["input"] = self._upload_image(png)
+            endpoint = "/generation/image-to-model"
+        elif image_url:
+            payload["input"] = image_url
+            endpoint = "/generation/image-to-model"
+        else:
+            endpoint = "/generation/text-to-model"
+
+        created = self._unwrap(self.client.request("POST", endpoint, json_body=payload))
+        task_id = str(created.get("task_id") or created.get("id") or "")
+        if not task_id:
+            raise cloud_api.CloudAPIError(
+                f"{endpoint} accepted the request but returned no task_id: {created}")
+        if verbose:
+            print(f"[tripo] task {task_id} submitted ({endpoint})")
+
+        return task_id, created
 
     def infer_and_save(
         self,
