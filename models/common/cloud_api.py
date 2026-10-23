@@ -29,6 +29,7 @@ import hashlib
 import json
 import logging
 import os
+import tempfile
 import time
 from pathlib import Path
 from typing import Any, Callable, Iterable, Optional
@@ -453,6 +454,22 @@ def bytes_hash(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def _atomic_write(path: Path, data: bytes) -> None:
+    """Publish a complete file; a crash must not expose a partial cache hit."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as handle:
+            temporary = Path(handle.name)
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
 class ResponseCache:
     """
     Content-addressed cache of generated artifacts.
@@ -495,13 +512,12 @@ class ResponseCache:
         if not self.enabled:
             return Path()
         blob, meta_path = self._paths(key, ext)
-        blob.parent.mkdir(parents=True, exist_ok=True)
-        blob.write_bytes(data)
-        meta_path.write_text(
+        # Publish the blob last: its presence is what ``get`` treats as success.
+        _atomic_write(meta_path,
             json.dumps({**meta, "cache_key": key, "bytes": len(data)},
-                       indent=2, ensure_ascii=False, default=str),
-            encoding="utf-8",
+                       indent=2, ensure_ascii=False, default=str).encode("utf-8"),
         )
+        _atomic_write(blob, data)
         return blob
 
 
